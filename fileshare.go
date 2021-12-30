@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Baozisoftware/qrcode-terminal-go"
 	"log"
 	"net"
 	"net/http"
+
+	qrcodeTerminal "github.com/Baozisoftware/qrcode-terminal-go"
 )
 
 func main() {
