@@ -23,6 +23,47 @@ func getOutboundIP() net.IP {
 	return localAddr.IP
 }
 
+type CustomResponseWriter struct {
+	w      http.ResponseWriter
+	Code   int
+	Length int
+}
+
+func NewCustomResponseWriter(ww http.ResponseWriter) *CustomResponseWriter {
+	return &CustomResponseWriter{
+		w:      ww,
+		Code:   0,
+		Length: 0,
+	}
+}
+
+func (w *CustomResponseWriter) Header() http.Header {
+	return w.w.Header()
+}
+
+func (w *CustomResponseWriter) Write(b []byte) (int, error) {
+	if w.Code == 0 {
+		w.Code = 200
+	}
+	n, err := w.w.Write(b)
+	w.Length += n
+	return n, err
+}
+
+func (w *CustomResponseWriter) WriteHeader(statusCode int) {
+	w.Code = statusCode
+	w.w.WriteHeader(statusCode)
+}
+
+//See: https://www.reddit.com/r/golang/comments/7p35s4/how_do_i_get_the_response_status_for_my_middleware/
+func logRequest(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w2 := NewCustomResponseWriter(w)
+		handler.ServeHTTP(w2, r)
+		log.Printf("%s %s %s %d %s %d\n", r.RemoteAddr, r.Method, r.URL, w2.Code, r.Method, w2.Length)
+	})
+}
+
 func main() {
 	port := flag.Int("port", 8080, "port number")
 	dir := flag.String("dir", ".", "the directroy to serve")
@@ -45,5 +86,5 @@ func main() {
 	art := q.ToSmallString(true)
 	fmt.Println(art)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), logRequest(http.DefaultServeMux)))
 }
