@@ -4,7 +4,32 @@ Just like `python -m SimpleHTTPServer`, it opens a simple web server, you can ge
 
 
 ```
-$ ./fileshare.exe
-Open your browser to the address below:
-http://192.168.200.124:8080
-...QRCODE HERE...
+
+$ go-fileshare -h
+Usage of ./go-fileshare:
+  -dir string
+        the directroy to serve (default ".")
+  -port int
+        port number (default 8080)
+
+$ go run main.go -port  8083 -dir ../
+Will serve /home/xxxx/scripts on http://10.0.2.1:8083
+
+Or you can scan the qrcode below on your phone:
+█▀▀▀▀▀█ █ ▀▀█▀▀▀██▀ ▀ █▀▀▀▀▀█
+█ ███ █ ▄▀▀██▀ ▄ ▀▀▄▄ █ ███ █
+█ ▀▀▀ █ █▄▀   ▄ ▀██▄█ █ ▀▀▀ █
+▀▀▀▀▀▀▀ ▀ ▀▄▀ ▀ ▀ ▀▄█ ▀▀▀▀▀▀▀
+▄▄▄▀ ▄▀  ▄███ ▄▄▄▀ █ ▄▄█▀▀▄▀█
+█▀█▄▄▀▀ █▀   ▄▄ ▀▄▀▄ ▀█▀ ▀▀█
+ █▀▄ ▄▀▀▀▄ ▀▄▄█▀▄█ ▄▀▄▀▄ ▄ ▄▄
+▄██   ▀▀▀▀▀█▄▄▄█▄▀ ▄  ▀█▄  ▄▀
+  ██▀█▀ █▀▄▄ ▀ ▀ █ ▀▄▄█▄ ▄ ▄▄
+▀ ▄▀▀▄▀▀█ ▄▀▄▀▀ ▀█▀▀▀▀ ▀ ▀ ██
+▀  ▀▀ ▀ ▄█▄▄▀█▄ █▄█ █▀▀▀█ ▀▀
+█▀▀▀▀▀█  ▀▀▄ ▀ ██▀▄▄█ ▀ █▀█▄▄
+█ ███ █ ▄█ █ ▀ ▄█ ▄▄▀██▀█▀ █▄
+█ ▀▀▀ █   █▀▄     ▀▄▄▀ █▀  ▄▀
+▀▀▀▀▀▀▀      ▀▀▀ ▀ ▀ ▀  ▀▀▀▀
+
+```
