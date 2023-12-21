@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	qrcode "github.com/skip2/go-qrcode"
@@ -55,7 +56,7 @@ func (w *CustomResponseWriter) WriteHeader(statusCode int) {
 	w.w.WriteHeader(statusCode)
 }
 
-//See: https://www.reddit.com/r/golang/comments/7p35s4/how_do_i_get_the_response_status_for_my_middleware/
+// See: https://www.reddit.com/r/golang/comments/7p35s4/how_do_i_get_the_response_status_for_my_middleware/
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w2 := NewCustomResponseWriter(w)
@@ -65,26 +66,42 @@ func logRequest(handler http.Handler) http.Handler {
 }
 
 func main() {
-	port := flag.Int("port", 8080, "port number")
-	dir := flag.String("dir", ".", "the directroy to serve")
+	ipStr := flag.String("ip", "", "the ip to bind, leave")
+	port := flag.Int("port", 8080, "the port to listen on")
+	dir := flag.String("dir", "", "the directroy to serve (REQUIRED)")
 	flag.Parse()
 
-	ip := getOutboundIP()
+	if *dir == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	var ip net.IP
+
+	if *ipStr != "" {
+		ip = net.ParseIP(*ipStr)
+		if ip == nil {
+			fmt.Printf("%s is not a valid ip address\n", ip)
+			os.Exit(1)
+		}
+	} else {
+		ip = getOutboundIP()
+	}
 
 	path, _ := filepath.Abs(*dir)
 	http.Handle("/", http.FileServer(http.Dir(path)))
 
 	url := fmt.Sprintf("http://%s:%d", ip.String(), *port)
 
-	fmt.Printf("Will serve %s on %s\n", path, url)
+	fmt.Printf("Visit %s by clicking: %s\n", path, url)
+	fmt.Println("Or you can scan the qrcode below:")
 	fmt.Println()
-
-	fmt.Println("Or you can scan the qrcode below on your phone:")
 
 	q, _ := qrcode.New(url, qrcode.Highest)
 	q.DisableBorder = true
 	art := q.ToSmallString(true)
 	fmt.Println(art)
+	fmt.Println()
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), logRequest(http.DefaultServeMux)))
 }

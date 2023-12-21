@@ -4,13 +4,15 @@ Just like `python -m SimpleHTTPServer`, it opens a simple web server and generat
 
 
 ```
-
-$ go-fileshare -h
+$ ./go-fileshare 
 Usage of ./go-fileshare:
   -dir string
-        the directroy to serve (default ".")
+    	the directroy to serve (REQUIRED)
+  -ip string
+    	the ip to bind, leave
   -port int
-        port number (default 8080)
+    	the port to listen on (default 8080)
+
 
 $ go-fileshare -port 8083 -dir ../
 Will serve /home/xxxx/scripts on http://10.0.2.1:8083
