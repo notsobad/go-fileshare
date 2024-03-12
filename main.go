@@ -68,12 +68,11 @@ func logRequest(handler http.Handler) http.Handler {
 func main() {
 	ipStr := flag.String("ip", "", "the ip to bind, leave")
 	port := flag.Int("port", 8080, "the port to listen on")
-	dir := flag.String("dir", "", "the directroy to serve (REQUIRED)")
+	dir := flag.String("dir", "", "the directroy to serve, default is current directory")
 	flag.Parse()
 
 	if *dir == "" {
-		flag.Usage()
-		os.Exit(1)
+		*dir, _ = os.Getwd()
 	}
 
 	var ip net.IP
