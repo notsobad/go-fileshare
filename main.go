@@ -3,14 +3,34 @@ package main
 import (
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	qrcode "github.com/skip2/go-qrcode"
 )
+
+var (
+	rootDir string
+)
+
+type File struct {
+	Path    string
+	Name    string
+	ModTime time.Time
+	Size    int64
+	IsDir   bool
+}
+
+type Directory struct {
+	Url   string
+	Files []File
+}
 
 func getOutboundIP() net.IP {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
@@ -24,45 +44,107 @@ func getOutboundIP() net.IP {
 	return localAddr.IP
 }
 
-type CustomResponseWriter struct {
-	w      http.ResponseWriter
-	Code   int
-	Length int
-}
+func fileHandler(w http.ResponseWriter, r *http.Request) {
+	//Do not cache
+	r.Header.Del("If-Modified-Since")
+	r.Header.Del("If-None-Match")
+	fmt.Println(r.URL.Path)
+	// r.URL.Path is already cleaned by the http server, so there is no '../' in url
+	// we can safely append it to the rootDir
+	path := rootDir + r.URL.Path
+	if strings.HasSuffix(path, "/") {
+		files, _ := filepath.Glob(path + "*")
+		// write the index page, list file and directorys, show filename, last modified time, size in table
 
-func NewCustomResponseWriter(ww http.ResponseWriter) *CustomResponseWriter {
-	return &CustomResponseWriter{
-		w:      ww,
-		Code:   0,
-		Length: 0,
+		var dir Directory
+		dir.Url = r.URL.Path
+		for _, file := range files {
+			_, filename := filepath.Split(file)
+			if strings.HasPrefix(filename, ".") {
+				continue
+			}
+			info, err := os.Stat(file)
+			if err != nil {
+				continue
+			}
+			dir.Files = append(dir.Files, File{
+				Path:    r.URL.Path + filename,
+				Name:    filename,
+				ModTime: info.ModTime(),
+				Size:    info.Size(),
+				IsDir:   info.IsDir(),
+			})
+		}
+		tmpl := template.Must(template.New("").Parse(`
+		<html>
+		<head><style>body{font-size:xx-large}
+		table{width:100%}
+		</style></head>
+		<body>
+		<h1>Index of {{.Url}}</h1>
+		<hr/>
+		<table width="100%">
+			{{if ne .Url "/"}}
+			<tr>
+				<td><a href="../">../</a></td>
+				<td></td>
+				<td></td>
+			</tr>
+			{{end}}
+			{{range .Files}}
+			<tr>
+				<td><a href="{{.Path}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
+				<td>{{.ModTime.Format "2006-01-02 15:03:02"}}</td>
+				<td>{{.Size}}</td>
+			</tr>
+			{{end}}
+		</table>
+		<hr/>
+		</body>
+		</html>
+		`))
+
+		err := tmpl.Execute(w, dir)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		//TODO: do not redirect '/index.html' to '/'
+		http.ServeFile(w, r, path)
 	}
 }
 
-func (w *CustomResponseWriter) Header() http.Header {
-	return w.w.Header()
-}
+func logHandler(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		lrw := NewLoggingResponseWriter(w)
+		h(lrw, r)
+		end := time.Now()
 
-func (w *CustomResponseWriter) Write(b []byte) (int, error) {
-	if w.Code == 0 {
-		w.Code = 200
+		fmt.Printf("%s %s %s %d %s %d\n",
+			end.Format("2006/01/02 15:04:05"),
+			r.RemoteAddr,
+			r.Method,
+			lrw.statusCode,
+			r.URL.Path,
+			end.Sub(start).Microseconds(),
+		)
 	}
-	n, err := w.w.Write(b)
-	w.Length += n
-	return n, err
 }
 
-func (w *CustomResponseWriter) WriteHeader(statusCode int) {
-	w.Code = statusCode
-	w.w.WriteHeader(statusCode)
+type LoggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
 }
 
-// See: https://www.reddit.com/r/golang/comments/7p35s4/how_do_i_get_the_response_status_for_my_middleware/
-func logRequest(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w2 := NewCustomResponseWriter(w)
-		handler.ServeHTTP(w2, r)
-		log.Printf("%s %s %s %d %s %d\n", r.RemoteAddr, r.Method, r.URL, w2.Code, r.Method, w2.Length)
-	})
+func NewLoggingResponseWriter(w http.ResponseWriter) *LoggingResponseWriter {
+	return &LoggingResponseWriter{w, http.StatusOK}
+}
+
+func (lrw *LoggingResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
 }
 
 func main() {
@@ -87,12 +169,13 @@ func main() {
 		ip = getOutboundIP()
 	}
 
-	path, _ := filepath.Abs(*dir)
-	http.Handle("/", http.FileServer(http.Dir(path)))
+	rootDir, _ = filepath.Abs(*dir)
+
+	http.HandleFunc("/", logHandler(fileHandler))
 
 	url := fmt.Sprintf("http://%s:%d", ip.String(), *port)
 
-	fmt.Printf("Visit %s by clicking: %s\n", path, url)
+	fmt.Printf("Visit %s by clicking: %s\n", rootDir, url)
 	fmt.Println("Or you can scan the qrcode below:")
 	fmt.Println()
 
@@ -102,5 +185,5 @@ func main() {
 	fmt.Println(art)
 	fmt.Println()
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), logRequest(http.DefaultServeMux)))
+	http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 }
