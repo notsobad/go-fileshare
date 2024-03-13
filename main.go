@@ -48,11 +48,19 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	//Do not cache
 	r.Header.Del("If-Modified-Since")
 	r.Header.Del("If-None-Match")
+
+	// Disable Client Cache
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+
 	fmt.Println(r.URL.Path)
 	// r.URL.Path is already cleaned by the http server, so there is no '../' in url
 	// we can safely append it to the rootDir
 	path := rootDir + r.URL.Path
 	if strings.HasSuffix(path, "/") {
+		// if the path is a directory, list the files and directories in it
+
 		files, _ := filepath.Glob(path + "*")
 		// write the index page, list file and directorys, show filename, last modified time, size in table
 
@@ -109,8 +117,16 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	} else if strings.HasSuffix(path, "index.html") {
+		// Avoid redirecting '/index.html' to '/'
+		f, err := os.Open(path)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		http.ServeContent(w, r, path, time.Now(), f)
 	} else {
-		//TODO: do not redirect '/index.html' to '/'
+		// Other files, just serve it
 		http.ServeFile(w, r, path)
 	}
 }
@@ -185,5 +201,5 @@ func main() {
 	fmt.Println(art)
 	fmt.Println()
 
-	http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
 }
