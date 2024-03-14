@@ -43,11 +43,12 @@ You can customize the behavior of Go-FileShare with the following options:
 - `-dir`: The directory to serve. Default is the current directory.
 - `-ip`: The IP to bind to.
 - `-port`: The port to listen on. Default is 8080.
+- `-auth`: Use basic auth to protect the service. like 'username:password'
 
 For example, to serve a specific directory on a specific IP and port, you could run:
 
 ```bash
-go-fileshare -dir /path/to/directory -ip 192.168.1.100 -port 8000
+go-fileshare -dir /path/to/directory -ip 192.168.1.100 -port 8000 -auth admin:123456
 ```
 
 ## 🎉 Conclusion

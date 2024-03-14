@@ -22,6 +22,10 @@ var (
 	indexHTML embed.FS
 )
 
+type Auth struct {
+	Username string
+	Password string
+}
 type File struct {
 	Path    string
 	Name    string
@@ -124,6 +128,18 @@ func logHandler(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func basicAuthHandler(h http.HandlerFunc, auth Auth) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, pass, ok := r.BasicAuth()
+		if !ok || user != auth.Username || pass != auth.Password {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Please enter your username and password"`)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+		h(w, r)
+	}
+}
+
 type LoggingResponseWriter struct {
 	http.ResponseWriter
 	statusCode int
@@ -142,6 +158,8 @@ func main() {
 	ipStr := flag.String("ip", "", "the ip to bind, default is the outbound ip address")
 	port := flag.Int("port", 8080, "the port to listen on")
 	dir := flag.String("dir", "", "the directroy to serve, default is current directory")
+	authStr := flag.String("auth", "", "Basic auth credentials in the format 'username:password'")
+
 	flag.Parse()
 
 	if *dir == "" {
@@ -160,11 +178,8 @@ func main() {
 		ip = getOutboundIP()
 	}
 
-	rootDir, _ = filepath.Abs(*dir)
-
-	http.HandleFunc("/", logHandler(fileHandler))
-
 	url := fmt.Sprintf("http://%s:%d", ip.String(), *port)
+	rootDir, _ = filepath.Abs(*dir)
 
 	fmt.Printf("Visit %s by clicking: %s\n", rootDir, url)
 	fmt.Println("Or you can scan the qrcode below:")
@@ -175,6 +190,21 @@ func main() {
 	art := q.ToSmallString(true)
 	fmt.Println(art)
 	fmt.Println()
+
+	if *authStr != "" {
+		parts := strings.SplitN(*authStr, ":", 2)
+		if len(parts) != 2 {
+			fmt.Println("Invalid auth credentials")
+			os.Exit(1)
+		}
+		auth := Auth{
+			Username: parts[0],
+			Password: parts[1],
+		}
+		http.HandleFunc("/", basicAuthHandler(logHandler(fileHandler), auth))
+	} else {
+		http.HandleFunc("/", logHandler(fileHandler))
+	}
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
 }
