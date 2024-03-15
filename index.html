@@ -12,13 +12,22 @@
 		table {
 			width: 100%
 		}
+
+		table tr {
+			font-size: larger;
+			line-height: 32px;
+		}
+
+		tr:nth-child(even) {
+			background-color: #f2f2f2;
+		}
 	</style>
 </head>
 
 <body>
 	<h1>Index of {{.Url}}</h1>
 	<hr />
-	<table width="100%">
+	<table>
 		{{if ne .Url "/"}}
 		<tr>
 			<td><a href="../">../</a></td>
