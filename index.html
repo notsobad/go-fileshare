@@ -3,7 +3,7 @@
 <head>
 	<style>
 		body {
-			font-size: xx-large;
+			font-size: larger;
 			margin-left: auto;
 			margin-right: auto;
 			width: 60%;
@@ -14,8 +14,8 @@
 		}
 
 		table tr {
-			font-size: larger;
-			line-height: 32px;
+			font-size: large;
+			line-height: 24px;
 		}
 
 		tr:nth-child(even) {
@@ -25,10 +25,10 @@
 </head>
 
 <body>
-	<h1>Index of {{.Url}}</h1>
+	<h1>Index of {{.ParentUrl}}</h1>
 	<hr />
 	<table>
-		{{if ne .Url "/"}}
+		{{if ne .ParentUrl "/"}}
 		<tr>
 			<td><a href="../">../</a></td>
 			<td></td>
@@ -37,7 +37,7 @@
 		{{end}}
 		{{range .Files}}
 		<tr>
-			<td><a href="{{.Path}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
+			<td><a href="{{$.ParentUrl}}{{.Name}}{{if .IsDir}}/{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
 			<td>{{.ModTime.Format "2006-01-02 15:03:02"}}</td>
 			<td>{{.Size}}</td>
 		</tr>

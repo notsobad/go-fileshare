@@ -27,7 +27,6 @@ type Auth struct {
 	Password string
 }
 type File struct {
-	Path    string
 	Name    string
 	ModTime time.Time
 	Size    int64
@@ -35,8 +34,8 @@ type File struct {
 }
 
 type Directory struct {
-	Url   string
-	Files []File
+	ParentUrl string
+	Files     []File
 }
 
 func getOutboundIP() net.IP {
@@ -71,7 +70,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 		// write the index page, list file and directorys, show filename, last modified time, size in table
 
 		var dir Directory
-		dir.Url = r.URL.Path
+		dir.ParentUrl = r.URL.Path
 		for _, file := range files {
 			_, filename := filepath.Split(file)
 			if strings.HasPrefix(filename, ".") {
@@ -82,7 +81,6 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			dir.Files = append(dir.Files, File{
-				Path:    r.URL.Path + filename,
 				Name:    filename,
 				ModTime: info.ModTime(),
 				Size:    info.Size(),
