@@ -115,12 +115,12 @@ func logHandler(h http.HandlerFunc) http.HandlerFunc {
 		h(lrw, r)
 		end := time.Now()
 
-		fmt.Printf("%s %s %s %d %s %d\n",
+		fmt.Printf("%s %s %s %s %d %d\n",
 			end.Format("2006/01/02 15:04:05"),
 			r.RemoteAddr,
 			r.Method,
-			lrw.statusCode,
 			r.URL.Path,
+			lrw.statusCode,
 			end.Sub(start).Microseconds(),
 		)
 	}
@@ -179,7 +179,7 @@ func main() {
 	url := fmt.Sprintf("http://%s:%d", ip.String(), *port)
 	rootDir, _ = filepath.Abs(*dir)
 
-	fmt.Printf("Visit %s by clicking: %s\n", rootDir, url)
+	fmt.Printf("Visit %s by clicking:\n%s\n", rootDir, url)
 	fmt.Println("Or you can scan the qrcode below:")
 	fmt.Println()
 
